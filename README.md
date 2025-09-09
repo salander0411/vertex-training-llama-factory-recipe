@@ -1,7 +1,7 @@
-This doc provides step-by-step guidance on how to use LLaMA-Factory to do fine-tuning on Vertex Custom Training, taking an example model of Qwen2.5-VL-32B, using a3-megagpu-8g (H100 mega) spot capacity type.  Check [this link](https://github.com/hiyouga/LLaMA-Factory?tab=readme-ov-file#supported-models) for a full list of supported models on LLaMA-Factory.
+This doc provides step-by-step guidance on how to use [LLaMA-Factory](https://github.com/hiyouga/LLaMA-Factory) to do fine-tuning on Vertex Custom Training, taking an example model of [Qwen2.5-VL-32B](https://huggingface.co/Qwen/Qwen2.5-VL-32B-Instruct), using [a3-megagpu-8g (H100 mega)](https://cloud.google.com/compute/docs/gpus#h100-gpus) spot capacity type.  Check [this link](https://github.com/hiyouga/LLaMA-Factory?tab=readme-ov-file#supported-models) for a full list of supported models on LLaMA-Factory.
 
 ## 0. Prerequisite  
-1. Familiarity with LLaMA-Factory. Refer to the documentation for comprehensive information. Also, understanding of Distributed Training and model parallelism settings. Consult this page for additional details.
+1. Familiarity with LLaMA-Factory. Refer to [the documentation](https://llamafactory.readthedocs.io/en/latest/) for comprehensive information. Also, understanding of Distributed Training and model parallelism settings. Consult [this page](https://llamafactory.readthedocs.io/en/latest/advanced/distributed.html#) for additional details.
 2. Enable APIs: Verify that the Vertex AI API is enabled for your project.
 3. Capacity & Quota: Vertex Custom Training supports Spot/DWS/on-demand/CUD. Make sure you have enough quota for your specific capacity types. 
 - On-demand:``aiplatform.googleapis.com/custom_model_training_nvidia_h100_gpus`` 
@@ -78,7 +78,7 @@ docker push <your-region-code>-docker.pkg.dev/<your-project-id>/<your-repo-name>
 ```
 
 ## 4. Revise and run your training script
-In custom-training-a3-mega.py , replace everything with your own. Note the sample used spot as a default capacity setting,  if you have a reservation and would like to use it, please replace spot with the reservation type and provide a valid reservation name. 
+In [custom-training-a3-mega.py](https://github.com/salander0411/vertex-training-llama-factory-recipe/blob/main/custom-training-a3-mega.py) , replace everything with your own. Note the sample used spot as a default capacity setting,  if you have a reservation and would like to use it, please replace spot with the reservation type and provide a valid reservation name. 
 
 ```   
 ### ===== Fill these with your project setup ======= 
@@ -118,3 +118,56 @@ After that run this script to start your Vertex training job
 ```
 python custom-training-a3-mega.py 
 ```
+
+## Appendix - Monitoring 
+
+There are several methods that you could track and monitor for your Vertex training job.
+
+### 1.Console
+Check the logs & metrics in a custom training job. 
+
+**Metrics**
+The metrics including CPU/GPU/Network   
+![metrics](images/[vertex%20training]metrics.png)
+
+**Logs**  
+Click **view logs** and you will be routed to log explorer, You could write queries to filter out the logs. E.g.,
+1. By keyword:  SEARCH("out of memory")
+2. By time range: timestamp >= "2023-11-29T23:00:00Z" AND timestamp <= "2023-11-29T23:30:00Z"
+3. By severity :  severity = ERROR
+4. Regular expressions:  jsonPayload.message =~ "regular expression pattern"
+
+For a full functionality and operator supported  please [check this doc](https://cloud.google.com/logging/docs/view/logging-query-language)
+
+### 2.Interactive Terminal
+After enabling the web access in Vertex training script, Vertex will be able to provide a node based debugging terminal for you.  This is very helpful especially if you are used to check the logs in a terminal.  For more information please [check this doc](https://cloud.google.com/vertex-ai/docs/training/monitor-debug-interactive-shell).     
+
+![launch web terminal](images/[vertex%20training]%20launch%20web%20terminal.png)
+
+
+After entering the terminal.  Note the terminal will be only accessible DURING a training session, and after the training job is complete, you will lose access to this terminal as the node is released automatically.   
+![web terminal](images/[vertex%20training]%20web%20terminal.png)
+
+Enabling it by one simple parameter “enable_web_access”.   
+![](images/[vertex%20training]%20enable%20web%20access.png)
+
+### 3.Streaming the logs to your bastion  
+Make sure gcloud version >= 302.0.0  
+```   
+# make sure  gcloud version >= 302.0.0
+gcloud version
+# this command should automatically install necessary libraries , if not please use this doc to install: 
+#Command-line interface | Cloud Logging
+
+gcloud alpha logging tail 'resource.labels.job_id="1234567"' \
+--format="value(json_payload.message)"
+
+```      
+![streaming logs](images/[vertex%20training]%20streaming%20logs.png)   
+
+### 4. 3rd Party Monitoring tool like Tensorboard. 
+
+1. If you use llama-factory, change ‘report_to’ to tensorboard. 
+2. Define logging_dir , format as /gcs/salander-europe-west1/xxx/tensorboard  
+![tensorboard](images/[vertex%20training]%20enable%20tensorboard.png).  
+3. Access the logs in tensorboard via command  similar to ``tensorboard --load_fast=false --logdir=gs://salander-europe-west1/xxx/tensorboard``
