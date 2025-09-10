@@ -12,21 +12,17 @@ This doc provides step-by-step guidance on how to use [LLaMA-Factory](https://gi
 To begin, download the necessary code repositories:
 ``` 
 git clone https://github.com/salander0411/vertex-training-llama-factory-recipe.git
+cd a3-mega/
 git clone --depth 1 https://github.com/hiyouga/LLaMA-Factory.git
 ```  
 
 After that the file structure should look like this.    
 ``` 
-Project Root/
+a3-mega/
 ├── LLaMA-Factory/ 
 ├── trainer/
 │    └── run_train_v2.py   # actual training script
 │    └── util/
-├── configurations/        # LLaMA-Factory configuration
-│    └── deepspeed/ 
-│ 	   └── deepspeed_z3_config.json  
-│ ├── llama-70b-full-sft.yaml 
-│ └── qwen-full-sft.yaml
 ├── custom-training-a3-mega.py   # Vertex training script
 ├── Dockerfile             # Dockerfile
 ├── Dockerfile.base        # base Dockerfile
@@ -128,7 +124,7 @@ Check the logs & metrics in a custom training job.
 
 **Metrics**
 The metrics including CPU/GPU/Network   
-![metrics](images/[vertex%20training]metrics.png)
+![metrics](../images/[vertex%20training]metrics.png)
 
 **Logs**  
 Click **view logs** and you will be routed to log explorer, You could write queries to filter out the logs. E.g.,
@@ -142,14 +138,14 @@ For a full functionality and operator supported  please [check this doc](https:/
 ### 2.Interactive Terminal
 After enabling the web access in Vertex training script, Vertex will be able to provide a node based debugging terminal for you.  This is very helpful especially if you are used to check the logs in a terminal.  For more information please [check this doc](https://cloud.google.com/vertex-ai/docs/training/monitor-debug-interactive-shell).     
 
-![launch web terminal](images/[vertex%20training]%20launch%20web%20terminal.png)
+![launch web terminal](../images/[vertex%20training]%20launch%20web%20terminal.png)
 
 
 After entering the terminal.  Note the terminal will be only accessible DURING a training session, and after the training job is complete, you will lose access to this terminal as the node is released automatically.   
-![web terminal](images/[vertex%20training]%20web%20terminal.png)
+![web terminal](../images/[vertex%20training]%20web%20terminal.png)
 
 Enabling it by one simple parameter “enable_web_access”.   
-![](images/[vertex%20training]%20enable%20web%20access.png)
+![](../images/[vertex%20training]%20enable%20web%20access.png)
 
 ### 3.Streaming the logs to your bastion  
 Make sure gcloud version >= 302.0.0  
@@ -163,11 +159,11 @@ gcloud alpha logging tail 'resource.labels.job_id="1234567"' \
 --format="value(json_payload.message)"
 
 ```      
-![streaming logs](images/[vertex%20training]%20streaming%20logs.png)   
+![streaming logs](../images/[vertex%20training]%20streaming%20logs.png)   
 
 ### 4. 3rd Party Monitoring tool like Tensorboard. 
 
 1. If you use llama-factory, change ‘report_to’ to tensorboard. 
 2. Define logging_dir , format as /gcs/salander-europe-west1/xxx/tensorboard  
-![tensorboard](images/[vertex%20training]%20enable%20tensorboard.png).  
+![tensorboard](../images/[vertex%20training]%20enable%20tensorboard.png).  
 3. Access the logs in tensorboard via command  similar to ``tensorboard --load_fast=false --logdir=gs://salander-europe-west1/xxx/tensorboard``

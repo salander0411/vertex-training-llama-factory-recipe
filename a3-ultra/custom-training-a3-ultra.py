@@ -12,25 +12,36 @@ import pprint
 project = "gpu-launchpad-playground" #project-id
 region = "us-central1"  #region
 bucket = "salander-us-central1" # Note the bucket must be a SINGLE region bucket type in the same region defined in "region"
-reservation_name = "<your reservation name>"  # optional,  fill in if you have any reservation
-image_uri="us-central1-docker.pkg.dev/gpu-launchpad-playground/tiangel-customer-workshop/multi-nodes:h100-mega" # Docker image
+reservation_name = "h200-reservation-Aug"  # optional,  fill in if you have any reservation
+image_uri="us-central1-docker.pkg.dev/gpu-launchpad-playground/tiangel-customer-workshop/multi-nodes:h200" # Docker image
+zone = "us-central1-b"  #your reservation zone
 
 # GPU setup
 n_nodes = 2  # node number. If it's a single node training, set it to 1
-machine_type = "a3-megagpu-8g"  
+machine_type = "a3-ultragpu-8g"  
 num_gpus_per_node = 8  # GPU number in single node 
-gpu_type = "NVIDIA_H100_MEGA_80GB" 
+gpu_type = "NVIDIA-H200-141GB"
 
 # Job name
 timestamp = datetime.datetime.now().astimezone(timezone('US/Pacific')).strftime("%Y%m%d_%H%M%S")
-job_name = f"qwen-32B-H100-mega-{timestamp}"
+job_name = f"qwen-32B-H200-{timestamp}"
 
 # Training command and args
-entrypoint_cmd = ['python', '/trainer/run_train_v2.py','/gcs/salander-us-central1/llama-factory/config/example-qwen-full-sft.yaml']  #replace with your own yaml file address
+entrypoint_cmd = ['python', '/app/trainer/run.py','/gcs/salander-us-central1/llama-factory/config/example-qwen-full-sft.yaml']  #replace with your own yaml file address
 base_output_dir = os.path.join("/gcs", bucket, job_name)
 trainer_args=[]
 
 ### ========== Project Setup finished =======  
+
+env_variables = dict(
+  NCCL_DEBUG="INFO",
+  NCCL_DEBUG_SUBSYS="INIT,NET,ENV,COLL,GRAPH",
+  NCCL_PLUGIN_PATH="/usr/local/gib/lib64",
+  NCCL_INIT_SCRIPT="/usr/local/gib/scripts/set_nccl_env.sh",
+  NCCL_SOCKET_IFNAME="eth0,eth1",
+  NCCL_SHIMNET_SHIM_LAYERS="UNUSED",
+  LD_LIBRARY_PATH="/usr/local/gib/lib64:/usr/local/nvidia/lib64"
+)
 
 def launch_job(job_name: str,
                project: str,
@@ -38,13 +49,12 @@ def launch_job(job_name: str,
                gcs_bucket: str,
                image_uri: str,
                entrypoint_cmd: List[str],
-               #trainer_args: List[Any],
                num_nodes: int = 1,
-               machine_type: str = "a3-megagpu-8g",
+               machine_type: str = "a3-ultragpu-8g",
                num_gpus_per_node: int = 8,
-               gpu_type: str = "NVIDIA_H100_MEGA_80GB",
-               capacity_source: str = "spot"
-               #reservation_name: str = ''
+               gpu_type: str = "NVIDIA-H200-141GB",
+               capacity_source: str = "reservation", 
+               reservation_name: str = ''
                ):
     assert capacity_source in ("on-demand", "spot", "reservation","flex-start")
     aiplatform.init(project=project, location=location, staging_bucket=gcs_bucket)
@@ -58,13 +68,13 @@ def launch_job(job_name: str,
     job_args = dict(
         args=trainer_args,
         replica_count=num_nodes,
-        #environment_variables=env_variables,
+        environment_variables=env_variables,
         machine_type=machine_type,
         accelerator_type=gpu_type,
         accelerator_count=num_gpus_per_node,
         enable_web_access=True,
         boot_disk_size_gb=1000,
-        #boot_disk_type="hyperdisk-balanced",
+        boot_disk_type="hyperdisk-balanced",
         restart_job_on_worker_restart=False,
     )
 
@@ -102,11 +112,10 @@ launch_job(
     gcs_bucket=bucket,
     image_uri=image_uri,
     entrypoint_cmd=entrypoint_cmd,
-    #trainer_args=trainer_args,
     num_nodes=n_nodes,
     machine_type=machine_type,
-    num_gpus_per_node=num_gpus_per_node,cd env_variablesls
+    num_gpus_per_node=num_gpus_per_node,
     gpu_type=gpu_type,
-    capacity_source="spot", # @param ["spot", "flex-start","reservation"]
-    #reservation_name=f"projects/{project}/zones/{zone}/reservations/{reservation_name}",
+    capacity_source="reservation", # @param ["spot", "flex-start","reservation"]
+    reservation_name=f"projects/{project}/zones/{zone}/reservations/{reservation_name}",
     )
